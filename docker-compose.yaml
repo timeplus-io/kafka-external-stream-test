@@ -1,0 +1,25 @@
+services:
+  # Proton - Open Source Streaming Database
+  # For enterprise Timeplus, replace with: timeplus/timeplusd:latest
+  timeplus:
+    image: timeplus/timeplus-enterprise:3.1.4-rc.3
+    platform: linux/amd64
+    ports:
+      - 8000:8000
+      - 8463:8463
+      - 8123:8123
+      - 3218:3218
+    environment:
+      - ENABLE_DATA_PREALLOCATE=false
+    volumes:
+      - timeplus_data:/timeplus/data/
+      - ./config/config.yaml:/etc/timeplus/config.yaml
+    
+    healthcheck:
+      test: ["CMD-SHELL", "timeplusd client --user proton --password timeplus@t+ --query 'select 1'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  timeplus_data:

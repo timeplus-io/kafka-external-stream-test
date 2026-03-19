@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+message SensorUpdate {
+    string id = 1;
+    float value = 2;
+    repeated int32 tags = 3;
+}
