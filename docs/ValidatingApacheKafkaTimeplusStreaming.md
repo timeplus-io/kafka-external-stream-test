@@ -328,6 +328,15 @@ A successful result demonstrates the engine’s ability to correctly map Timeplu
 
 For enterprise-grade streaming, Apache Avro combined with a Schema Registry is the standard for ensuring schema evolution and backward compatibility. Verification in this context involves not just the data transport, but the authentication to the registry and the correct handling of schema IDs prepended to the binary payload.
 
+### **Step 0: Pre-requisite - Register Avro Schema**
+
+Before creating the external streams, the Avro schema must be registered with the Schema Registry. This can be done using the provided Python script.
+
+```bash
+# Set environment variables in schema/case4/.env first
+python schema/case4/register.py
+```
+
 ### **Step 1: Data Generation with Nullable Types**
 
 Avro is particularly adept at handling optional fields using unions. Verification should include nullable types to test this functionality.
@@ -366,7 +375,8 @@ CREATE EXTERNAL STREAM avro_kafka_sink (
     password='<Password>',
     data_format='Avro',
     kafka_schema_registry_url='<Schema_Registry_URL>',
-    kafka_schema_registry_credentials='<Username>:<Password>';
+    kafka_schema_registry_credentials='<Username>:<Password>',
+    schema_subject_name='case4.avro_verification';
 
 CREATE MATERIALIZED VIEW mv_avro_verify INTO avro_kafka_sink AS 
 SELECT * FROM avro_verification_gen;
@@ -395,7 +405,8 @@ CREATE EXTERNAL STREAM avro_kafka_source (
     password='<Password>',
     data_format='Avro',
     kafka_schema_registry_url='<Schema_Registry_URL>',
-    kafka_schema_registry_credentials='<Username>:<Password>';
+    kafka_schema_registry_credentials='<Username>:<Password>',
+    schema_subject_name='case4.avro_verification';
 
 ```
 
@@ -463,5 +474,87 @@ CREATE EXTERNAL STREAM high_perf_sink (
     max_insert_block_bytes=2097152, -- 2MB batches
     max_insert_block_size=100000;    -- 100k rows per flush
 
+```
+
+## **Test Case Suite V: Protobuf and Schema Registry Integration**
+
+This test case exercises the integration of Protobuf serialization with a Confluent-compatible Schema Registry. Unlike Case III, which uses local schema management, this case relies on the registry to manage versions and provide the schema to the processing engine.
+
+### **Step 0: Pre-requisite - Register Protobuf Schema**
+
+First, register the Protobuf schema with the Schema Registry using the provided script.
+
+```bash
+# Set environment variables (SCHEMA_REGISTRY_URL, etc.)
+python schema/case5/register.py
+```
+
+### **Step 1: Data Generation via Python External Stream**
+
+In this scenario, we use a Python-based External Stream to generate and serialize Protobuf data, producing it directly to Kafka while also yielding it to Timeplus for comparison.
+
+```sql
+CREATE DATABASE IF NOT EXISTS case5;
+
+CREATE EXTERNAL STREAM case5.sensor_update_datagen(
+    id string, 
+    value float64, 
+    tags string, 
+    kafka_topic string, 
+    generated_at datetime64(3)
+)
+AS $$
+# ... (Python producer logic using confluent_kafka.schema_registry.protobuf)
+$$
+SETTINGS type='python', mode='streaming', read_function_name='read_sensor_updates';
+```
+
+### **Step 2: Sink with Protobuf and Registry Settings**
+
+The sink is configured to write data back to Kafka (if needed for further validation) or simply as a reference for the DDL structure.
+
+```sql
+CREATE EXTERNAL STREAM case5.proto_kafka_sink (
+    id string,
+    value float32,
+    tags array(int32)
+) SETTINGS 
+    type='kafka',
+    brokers='<Kafka_Broker_URL>',
+    topic='sensor-update',
+    data_format='ProtobufSingle',
+    kafka_schema_registry_url='<Schema_Registry_URL>',
+    kafka_schema_registry_credentials='<Username>:<Password>',
+    schema_subject_name='sensor-update';
+```
+
+### **Step 3: Ingress via Schema Registry**
+
+The source stream leverages the Schema Registry to automatically decode the incoming Protobuf messages.
+
+```sql
+CREATE EXTERNAL STREAM case5.proto_kafka_source (
+    id string,
+    value float32,
+    tags array(int32)
+) SETTINGS 
+    type='kafka',
+    brokers='<Kafka_Broker_URL>',
+    topic='sensor-update',
+    data_format='ProtobufSingle',
+    kafka_schema_registry_url='<Schema_Registry_URL>',
+    kafka_schema_registry_credentials='<Username>:<Password>',
+    schema_subject_name='sensor-update';
+```
+
+### **Step 4: Analytical Validation**
+
+```sql
+SELECT 
+    id, 
+    value, 
+    tags 
+FROM case5.proto_kafka_source 
+LIMIT 10;
 ```
 

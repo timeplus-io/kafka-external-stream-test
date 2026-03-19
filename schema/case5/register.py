@@ -8,7 +8,7 @@ SCHEMA_REGISTRY_URL = os.getenv("SCHEMA_REGISTRY_URL")
 USERNAME = os.getenv("SCHEMA_REGISTRY_USERNAME")
 PASSWORD = os.getenv("SCHEMA_REGISTRY_PASSWORD")
 
-SUBJECT = "case4.sensor-update-value"  # adjust as needed
+SUBJECT = "sensor-update-value"
 
 # Validate env vars
 if not all([SCHEMA_REGISTRY_URL, USERNAME, PASSWORD]):
