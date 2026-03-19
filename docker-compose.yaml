@@ -11,6 +11,12 @@ services:
       - 3218:3218
     environment:
       - ENABLE_DATA_PREALLOCATE=false
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
+      - KAFKA_USERNAME=${KAFKA_USERNAME}
+      - KAFKA_PASSWORD=${KAFKA_PASSWORD}
+      - KAFKA_SCHEMA_REGISTRY_URL=${KAFKA_SCHEMA_REGISTRY_URL}
+      - KAFKA_SCHEMA_REGISTRY_USERNAME=${KAFKA_SCHEMA_REGISTRY_USERNAME}
+      - KAFKA_SCHEMA_REGISTRY_PASSWORD=${KAFKA_SCHEMA_REGISTRY_PASSWORD}
     volumes:
       - timeplus_data:/timeplus/data/
       - ./config/config.yaml:/etc/timeplus/config.yaml
